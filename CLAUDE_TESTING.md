@@ -36,3 +36,34 @@ mvn spring-boot:run
 
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - H2 Console: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:mem:orderdb`, user: `sa`, no password)
+
+---
+
+## Payment API (Spec-Driven Development)
+
+OpenAPI spec: [`specs/payment-api.yaml`](specs/payment-api.yaml) — written first as the authoritative contract.
+
+### Automated Test Results — 13/13 PASS
+
+**Integration Tests (PaymentIntegrationTest) — 7/7**
+
+| # | Scenario | Endpoint | Expected | Spec Rule |
+|---|----------|----------|----------|-----------|
+| 1 | Full lifecycle: pay + get + refund | POST/GET/POST | 201/200/200 | Happy path |
+| 2 | Non-existent order | POST /api/orders/9999/payments | 404 | Order must exist |
+| 3 | Wrong amount | POST /api/orders/{id}/payments | 400 AMOUNT_MISMATCH | Amount must match |
+| 4 | Already paid order | POST /api/orders/{id}/payments | 409 PAYMENT_EXISTS | One payment per order |
+| 5 | Refund unpaid order | POST /api/orders/{id}/payments/refund | 404 | Payment must exist |
+| 6 | Order not PLACED | POST /api/orders/{id}/payments | 400 ORDER_NOT_PLACEABLE | Order must be PLACED |
+| 7 | Double refund | POST /api/orders/{id}/payments/refund | 400 PAYMENT_NOT_REFUNDABLE | Only SUCCESS refundable |
+
+**Unit Tests (PaymentServiceTest) — 6/6**
+
+| # | Scenario | Assertion |
+|---|----------|-----------|
+| 1 | Valid payment | Status = SUCCESS |
+| 2 | Order not found | Throws OrderNotFoundException |
+| 3 | Amount mismatch | Throws PaymentValidationException (AMOUNT_MISMATCH) |
+| 4 | Duplicate payment | Throws PaymentConflictException |
+| 5 | Valid refund | Status = REFUNDED, order = CANCELLED |
+| 6 | Non-refundable | Throws PaymentValidationException (PAYMENT_NOT_REFUNDABLE) |
